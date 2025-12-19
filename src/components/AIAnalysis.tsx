@@ -1,8 +1,11 @@
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Brain, AlertCircle, Activity, Volume2, TrendingUp } from "lucide-react";
+import { Brain, AlertCircle, Activity, Volume2, TrendingUp, RefreshCw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface PatientData {
   id: string;
@@ -23,16 +26,22 @@ interface AIAnalysisProps {
 interface DiagnosisResult {
   triageLevel: "critical" | "urgent" | "stable";
   probableConditions: Array<{
-    condition: string;
+    name?: string;
+    condition?: string;
     confidence: number;
-    severity: string;
+    severity?: string;
   }>;
   immediateActions: string[];
-  recommendations: string[];
+  medicationRecommendations?: Array<{
+    medication: string;
+    reason: string;
+    warning: string;
+  }>;
+  recommendations?: string[];
   explanation: string;
 }
 
-// Mock AI analysis result based on patient data
+// Fallback mock analysis for users without proper role
 const generateMockAnalysis = (patient: PatientData): DiagnosisResult => {
   const hasCardiacHistory = patient.conditions.some(c => c.toLowerCase().includes('mi') || c.toLowerCase().includes('heart'));
   const hasDiabetes = patient.conditions.some(c => c.toLowerCase().includes('diabetes'));
@@ -82,8 +91,78 @@ const generateMockAnalysis = (patient: PatientData): DiagnosisResult => {
   };
 };
 
-export const AIAnalysis = ({ patient, isLoading, onVoiceAlert }: AIAnalysisProps) => {
-  const analysis = generateMockAnalysis(patient);
+export const AIAnalysis = ({ patient, isLoading: initialLoading, onVoiceAlert }: AIAnalysisProps) => {
+  const [analysis, setAnalysis] = useState<DiagnosisResult | null>(null);
+  const [isLoading, setIsLoading] = useState(initialLoading);
+  const [isAIAnalysis, setIsAIAnalysis] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAIAnalysis = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // No session, use mock
+        setAnalysis(generateMockAnalysis(patient));
+        setIsAIAnalysis(false);
+        return;
+      }
+
+      const response = await fetch(
+        `https://fpqavxmfknxqsyrqyhxz.supabase.co/functions/v1/ai-diagnosis`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ patientData: patient }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        if (response.status === 403) {
+          // User lacks role, use mock with notice
+          toast.info("Demo mode: Medical responder role required for AI analysis");
+          setAnalysis(generateMockAnalysis(patient));
+          setIsAIAnalysis(false);
+          return;
+        }
+        
+        if (response.status === 429) {
+          toast.error("Rate limit exceeded. Please try again later.");
+          setAnalysis(generateMockAnalysis(patient));
+          setIsAIAnalysis(false);
+          return;
+        }
+
+        throw new Error(errorData.error || "AI analysis failed");
+      }
+
+      const data = await response.json();
+      setAnalysis(data.analysis);
+      setIsAIAnalysis(true);
+    } catch (err) {
+      console.error("AI analysis error:", err);
+      setError(err instanceof Error ? err.message : "Unknown error");
+      // Fallback to mock
+      setAnalysis(generateMockAnalysis(patient));
+      setIsAIAnalysis(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (patient && !initialLoading) {
+      fetchAIAnalysis();
+    }
+  }, [patient, initialLoading]);
 
   const triageColors = {
     critical: {
@@ -106,9 +185,7 @@ export const AIAnalysis = ({ patient, isLoading, onVoiceAlert }: AIAnalysisProps
     }
   };
 
-  const colors = triageColors[analysis.triageLevel];
-
-  if (isLoading) {
+  if (isLoading || !analysis) {
     return (
       <Card className="p-6 bg-card border border-border">
         <div className="flex items-center gap-3 mb-6">
@@ -127,22 +204,52 @@ export const AIAnalysis = ({ patient, isLoading, onVoiceAlert }: AIAnalysisProps
     );
   }
 
+  const colors = triageColors[analysis.triageLevel];
+  
+  // Normalize conditions to handle both API formats
+  const conditions = analysis.probableConditions.map(c => ({
+    name: c.name || c.condition || "Unknown",
+    confidence: c.confidence,
+    severity: c.severity || "Unknown"
+  }));
+
+  // Use recommendations or generate from medicationRecommendations
+  const recommendations = analysis.recommendations || 
+    analysis.medicationRecommendations?.map(m => `${m.medication}: ${m.reason} (Warning: ${m.warning})`) || 
+    [];
+
   return (
     <Card className="p-6 bg-card border border-border">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
           <Brain className="h-6 w-6 text-primary" />
-          <h3 className="text-xl font-bold text-foreground">AI Emergency Analysis</h3>
+          <div>
+            <h3 className="text-xl font-bold text-foreground">AI Emergency Analysis</h3>
+            {!isAIAnalysis && (
+              <span className="text-xs text-muted-foreground">(Demo Mode)</span>
+            )}
+          </div>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onVoiceAlert(`URGENT: Triage level ${analysis.triageLevel}. ${analysis.immediateActions[0]}`)}
-          className="border-border"
-        >
-          <Volume2 className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={fetchAIAnalysis}
+            disabled={isLoading}
+            className="border-border"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onVoiceAlert(`URGENT: Triage level ${analysis.triageLevel}. ${analysis.immediateActions[0]}`)}
+            className="border-border"
+          >
+            <Volume2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Triage Level */}
@@ -167,10 +274,10 @@ export const AIAnalysis = ({ patient, isLoading, onVoiceAlert }: AIAnalysisProps
           <span className="text-sm font-semibold text-foreground">Probable Conditions (AI Assessment)</span>
         </div>
         <div className="space-y-3">
-          {analysis.probableConditions.map((item, idx) => (
+          {conditions.map((item, idx) => (
             <div key={idx} className="p-3 bg-muted rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-foreground">{item.condition}</span>
+                <span className="text-sm font-medium text-foreground">{item.name}</span>
                 <Badge variant="outline" className="border-primary text-primary">
                   {item.severity}
                 </Badge>
@@ -203,20 +310,22 @@ export const AIAnalysis = ({ patient, isLoading, onVoiceAlert }: AIAnalysisProps
       </div>
 
       {/* Recommendations */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Clinical Recommendations</span>
+      {recommendations.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-foreground">Clinical Recommendations</span>
+          </div>
+          <ul className="space-y-2">
+            {recommendations.map((rec, idx) => (
+              <li key={idx} className="text-sm text-muted-foreground bg-muted p-2 rounded flex items-start gap-2">
+                <span className="text-primary mt-0.5">•</span>
+                {rec}
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="space-y-2">
-          {analysis.recommendations.map((rec, idx) => (
-            <li key={idx} className="text-sm text-muted-foreground bg-muted p-2 rounded flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              {rec}
-            </li>
-          ))}
-        </ul>
-      </div>
+      )}
 
       {/* AI Explanation */}
       <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
