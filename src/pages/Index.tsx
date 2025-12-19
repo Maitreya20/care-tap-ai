@@ -5,6 +5,7 @@ import { Shield, Activity, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { AIChatbot } from "@/components/AIChatbot";
 
 const Index = () => {
   const [scannedPatientId, setScannedPatientId] = useState<string | null>(null);
@@ -78,6 +79,8 @@ const Index = () => {
           />
         )}
       </main>
+      
+      <AIChatbot />
     </div>
   );
 };

@@ -2,3 +2,6 @@ project_id = "fpqavxmfknxqsyrqyhxz"
 
 [functions.ai-diagnosis]
 verify_jwt = true
+
+[functions.chatbot]
+verify_jwt = false
