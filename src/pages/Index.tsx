@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { NFCScanner } from "@/components/NFCScanner";
 import { PatientDashboard } from "@/components/PatientDashboard";
-import { Shield, Activity, LogOut } from "lucide-react";
+import { Shield, Activity, LogOut, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import { AIChatbot } from "@/components/AIChatbot";
 const Index = () => {
   const [scannedPatientId, setScannedPatientId] = useState<string | null>(null);
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
@@ -30,10 +32,14 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Emergency Health Response System</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {user?.email}
             </span>
+            <Button variant="outline" size="sm" onClick={() => navigate("/add-patient")}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Patient
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
