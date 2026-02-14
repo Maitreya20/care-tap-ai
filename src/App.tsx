@@ -7,6 +7,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AddPatient from "./pages/AddPatient";
+import PatientView from "./pages/PatientView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,8 +28,17 @@ const App = () => (
                 <ProtectedRoute>
                   <Index />
                 </ProtectedRoute>
-              } 
+              }
             />
+            <Route
+              path="/add-patient"
+              element={
+                <ProtectedRoute>
+                  <AddPatient />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/patient/:id" element={<PatientView />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
