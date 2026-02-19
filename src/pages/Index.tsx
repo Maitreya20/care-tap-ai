@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NFCScanner } from "@/components/NFCScanner";
 import { PatientDashboard } from "@/components/PatientDashboard";
-import { Shield, Activity, LogOut, UserPlus } from "lucide-react";
+import { Shield, Activity, LogOut, UserPlus, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -39,6 +39,10 @@ const Index = () => {
             <Button variant="outline" size="sm" onClick={() => navigate("/add-patient")}>
               <UserPlus className="h-4 w-4 mr-2" />
               Add Patient
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/write-nfc")}>
+              <Smartphone className="h-4 w-4 mr-2" />
+              Write NFC
             </Button>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />

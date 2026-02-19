@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AddPatient from "./pages/AddPatient";
 import PatientView from "./pages/PatientView";
+import WriteNFC from "./pages/WriteNFC";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AddPatient />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/write-nfc"
+              element={
+                <ProtectedRoute>
+                  <WriteNFC />
                 </ProtectedRoute>
               }
             />
