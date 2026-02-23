@@ -7,6 +7,22 @@ import { z } from "zod";
 
 const patientIdSchema = z.string().uuid("Must be a valid patient UUID");
 
+const extractPatientId = (rawData: string): string | null => {
+  const directId = patientIdSchema.safeParse(rawData);
+  if (directId.success) return directId.data;
+
+  try {
+    const parsedUrl = new URL(rawData);
+    const match = parsedUrl.pathname.match(/^\/patient\/([0-9a-fA-F-]{36})$/);
+    if (!match?.[1]) return null;
+
+    const fromUrl = patientIdSchema.safeParse(match[1]);
+    return fromUrl.success ? fromUrl.data : null;
+  } catch {
+    return null;
+  }
+};
+
 interface NFCScannerProps {
   onPatientScanned: (patientId: string) => void;
 }
@@ -34,7 +50,7 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
 
     try {
       setIsScanning(true);
-      // @ts-ignore - Web NFC API types
+      // @ts-expect-error - Web NFC API types are not available in TypeScript DOM lib
       const ndef = new NDEFReader();
       await ndef.scan();
 
@@ -42,24 +58,24 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
         description: "Hold NFC card near your device"
       });
 
-      // @ts-ignore
+      // @ts-expect-error - Web NFC event types are not available in TypeScript DOM lib
       ndef.addEventListener("reading", ({ message }) => {
         for (const record of message.records) {
-          if (record.recordType === "text") {
+          if (record.recordType === "text" || record.recordType === "url") {
             const textDecoder = new TextDecoder(record.encoding || "utf-8");
             const rawData = textDecoder.decode(record.data);
             
-            const result = patientIdSchema.safeParse(rawData);
-            if (!result.success) {
+            const extractedPatientId = extractPatientId(rawData);
+            if (!extractedPatientId) {
               setIsScanning(false);
               toast.error("Invalid NFC tag data", {
-                description: "Tag does not contain a valid patient ID"
+                description: "Tag does not contain a valid patient ID or patient URL"
               });
               return;
             }
             
             setIsScanning(false);
-            onPatientScanned(result.data);
+            onPatientScanned(extractedPatientId);
             toast.success("Patient card scanned successfully");
             return;
           }
@@ -69,7 +85,7 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
         toast.error("No valid patient data found on NFC tag");
       });
 
-      // @ts-ignore
+      // @ts-expect-error - Web NFC event types are not available in TypeScript DOM lib
       ndef.addEventListener("readingerror", () => {
         setIsScanning(false);
         toast.error("Failed to read NFC tag");
@@ -145,8 +161,8 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
         <Card className="p-4 flex items-start gap-3 bg-card border border-border">
           <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <h4 className="font-semibold text-sm text-foreground">Encrypted Data</h4>
-            <p className="text-xs text-muted-foreground">Patient IDs are AES-256 encrypted</p>
+            <h4 className="font-semibold text-sm text-foreground">Tag Data</h4>
+            <p className="text-xs text-muted-foreground">Reads patient UUIDs and /patient/&lt;id&gt; URLs</p>
           </div>
         </Card>
       </div>
