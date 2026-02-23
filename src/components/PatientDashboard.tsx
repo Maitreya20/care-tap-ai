@@ -5,6 +5,7 @@ import { ArrowLeft, Volume2 } from "lucide-react";
 import { PatientInfo } from "@/components/PatientInfo";
 import { AIAnalysis } from "@/components/AIAnalysis";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PatientDashboardProps {
   patientId: string;
@@ -24,6 +25,16 @@ interface PatientData {
     phone: string;
     relation: string;
   };
+}
+
+interface DbPatient {
+  id: string;
+  blood_type: string | null;
+  user_id: string;
+  allergies: { allergen: string }[];
+  medications: { medication_name: string; dosage: string; frequency: string }[];
+  conditions: { condition: string; status: string }[];
+  emergency_contacts: { name: string; phone: string; relationship: string }[];
 }
 
 // Mock patient database
@@ -47,13 +58,78 @@ const MOCK_PATIENTS: Record<string, PatientData> = {
 export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) => {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [isLoadingPatient, setIsLoadingPatient] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching patient data
     const fetchPatient = async () => {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const patientData = MOCK_PATIENTS[patientId] || MOCK_PATIENTS["DEMO-12345"];
-      setPatient(patientData);
+      setIsLoadingPatient(true);
+
+      // Keep demo mode available for local/non-NFC simulation only.
+      if (patientId === "DEMO-12345") {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setPatient(MOCK_PATIENTS["DEMO-12345"]);
+        setIsLoadingPatient(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("patients")
+        .select(`
+          id,
+          blood_type,
+          user_id,
+          allergies(allergen),
+          medications(medication_name, dosage, frequency),
+          conditions:medical_history(condition, status),
+          emergency_contacts(name, phone, relationship)
+        `)
+        .eq("id", patientId)
+        .eq("is_active", true)
+        .single();
+
+      if (error || !data) {
+        toast.error("Patient not found", {
+          description: "The scanned NFC tag does not match an active patient record.",
+        });
+        setPatient(null);
+        setIsLoadingPatient(false);
+        return;
+      }
+
+      const dbPatient = data as unknown as DbPatient;
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, date_of_birth")
+        .eq("id", dbPatient.user_id)
+        .single();
+
+      const age = profileData?.date_of_birth
+        ? Math.floor((Date.now() - new Date(profileData.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        : 0;
+
+      const mappedPatient: PatientData = {
+        id: dbPatient.id,
+        name: profileData?.full_name || "Unknown Patient",
+        age,
+        bloodType: dbPatient.blood_type || "Unknown",
+        allergies: dbPatient.allergies.map((a) => a.allergen),
+        medications: dbPatient.medications.map((m) => `${m.medication_name} — ${m.dosage} — ${m.frequency}`),
+        conditions: dbPatient.conditions.map((c) => `${c.condition} (${c.status})`),
+        emergencyContact: dbPatient.emergency_contacts[0]
+          ? {
+              name: dbPatient.emergency_contacts[0].name,
+              phone: dbPatient.emergency_contacts[0].phone,
+              relation: dbPatient.emergency_contacts[0].relationship,
+            }
+          : {
+              name: "Not available",
+              phone: "Not available",
+              relation: "Not available",
+            },
+      };
+
+      setPatient(mappedPatient);
+      setIsLoadingPatient(false);
       
       // Auto-trigger AI analysis
       setTimeout(() => {
@@ -78,12 +154,23 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
     }
   };
 
-  if (!patient) {
+  if (isLoadingPatient) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mb-4" />
           <p className="text-muted-foreground">Loading patient data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-3">
+          <p className="text-muted-foreground">No active patient record matched this NFC tag.</p>
+          <Button variant="outline" onClick={onBack}>Scan Another Card</Button>
         </div>
       </div>
     );
