@@ -132,7 +132,7 @@ const AddPatient = () => {
             reaction: a.reaction || null,
           }))
         );
-        if (allergyError) console.warn("Allergy insert error:", allergyError.message);
+        if (allergyError) toast.warning("Some allergies could not be saved");
       }
 
       // 3. Insert medications
@@ -145,7 +145,7 @@ const AddPatient = () => {
             frequency: m.frequency,
           }))
         );
-        if (medError) console.warn("Medication insert error:", medError.message);
+        if (medError) toast.warning("Some medications could not be saved");
       }
 
       // 4. Insert medical history
@@ -157,7 +157,7 @@ const AddPatient = () => {
             status: c.status,
           }))
         );
-        if (condError) console.warn("Condition insert error:", condError.message);
+        if (condError) toast.warning("Some conditions could not be saved");
       }
 
       // 5. Insert emergency contact
@@ -169,7 +169,7 @@ const AddPatient = () => {
           relationship: ecRelationship.trim(),
           email: ecEmail.trim() || null,
         });
-        if (ecError) console.warn("Emergency contact insert error:", ecError.message);
+        if (ecError) toast.warning("Emergency contact could not be saved");
       }
 
       // Generate the URL
@@ -177,7 +177,6 @@ const AddPatient = () => {
       setGeneratedUrl(url);
       toast.success("Patient registered successfully!");
     } catch (err: any) {
-      console.error("Error creating patient:", err);
       toast.error(err.message || "Failed to create patient");
     } finally {
       setIsSubmitting(false);

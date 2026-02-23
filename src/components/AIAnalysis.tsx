@@ -148,7 +148,6 @@ export const AIAnalysis = ({ patient, isLoading: initialLoading, onVoiceAlert }:
       setAnalysis(data.analysis);
       setIsAIAnalysis(true);
     } catch (err) {
-      console.error("AI analysis error:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
       // Fallback to mock
       setAnalysis(generateMockAnalysis(patient));

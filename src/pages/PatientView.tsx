@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, Navigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Activity, User, Droplet, AlertTriangle, Pill, Stethoscope, Phone, ShieldAlert } from "lucide-react";
+import { Activity, User, Droplet, AlertTriangle, Pill, Stethoscope, Phone, ShieldAlert, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PatientViewData {
   id: string;
@@ -29,11 +30,14 @@ interface PatientViewData {
 
 const PatientView = () => {
   const { id } = useParams<{ id: string }>();
+  const { user, loading: authLoading } = useAuth();
   const [patient, setPatient] = useState<PatientViewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user) return;
+    
     const fetchPatient = async () => {
       if (!id) {
         setError("No patient ID provided");
@@ -42,7 +46,6 @@ const PatientView = () => {
       }
 
       try {
-        // Fetch patient record
         const { data: patientData, error: patientError } = await supabase
           .from("patients")
           .select("id, blood_type, height_cm, weight_kg, medical_notes, insurance_provider, primary_physician, primary_physician_phone, user_id")
@@ -56,7 +59,6 @@ const PatientView = () => {
           return;
         }
 
-        // Fetch related data in parallel
         const [profileRes, allergiesRes, medsRes, conditionsRes, contactsRes] = await Promise.all([
           supabase.from("profiles").select("full_name, date_of_birth, phone, gender").eq("id", patientData.user_id).single(),
           supabase.from("allergies").select("allergen, severity, reaction").eq("patient_id", id),
@@ -81,7 +83,6 @@ const PatientView = () => {
           emergency_contacts: contactsRes.data || [],
         });
       } catch (err) {
-        console.error("Error fetching patient:", err);
         setError("Failed to load patient data");
       } finally {
         setLoading(false);
@@ -89,7 +90,19 @@ const PatientView = () => {
     };
 
     fetchPatient();
-  }, [id]);
+  }, [id, user, authLoading]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   if (loading) {
     return (

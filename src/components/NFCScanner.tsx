@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Smartphone, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const patientIdSchema = z.string().uuid("Must be a valid patient UUID");
 
 interface NFCScannerProps {
   onPatientScanned: (patientId: string) => void;
@@ -40,25 +43,30 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
       });
 
       // @ts-ignore
-      ndef.addEventListener("reading", ({ message, serialNumber }) => {
-        console.log("NFC tag detected:", serialNumber);
-        
+      ndef.addEventListener("reading", ({ message }) => {
         for (const record of message.records) {
           if (record.recordType === "text") {
             const textDecoder = new TextDecoder(record.encoding || "utf-8");
-            const patientId = textDecoder.decode(record.data);
+            const rawData = textDecoder.decode(record.data);
+            
+            const result = patientIdSchema.safeParse(rawData);
+            if (!result.success) {
+              setIsScanning(false);
+              toast.error("Invalid NFC tag data", {
+                description: "Tag does not contain a valid patient ID"
+              });
+              return;
+            }
             
             setIsScanning(false);
-            onPatientScanned(patientId);
+            onPatientScanned(result.data);
             toast.success("Patient card scanned successfully");
             return;
           }
         }
         
-        // If no valid record found, use serial number
         setIsScanning(false);
-        onPatientScanned(serialNumber);
-        toast.success("NFC tag detected");
+        toast.error("No valid patient data found on NFC tag");
       });
 
       // @ts-ignore
@@ -68,7 +76,6 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
       });
 
     } catch (error) {
-      console.error("NFC error:", error);
       setIsScanning(false);
       toast.error("NFC scan failed", {
         description: "Please check permissions and try again"
