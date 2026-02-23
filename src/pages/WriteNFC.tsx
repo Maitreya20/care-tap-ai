@@ -98,7 +98,6 @@ const WriteNFC = () => {
         description: "The patient URL has been written to the NFC card.",
       });
     } catch (error: any) {
-      console.error("NFC write error:", error);
       setIsWriting(false);
       setWriteStatus("error");
       toast.error("Failed to write NFC card", {

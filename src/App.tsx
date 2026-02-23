@@ -34,7 +34,7 @@ const App = () => (
             <Route
               path="/add-patient"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="medical_responder">
                   <AddPatient />
                 </ProtectedRoute>
               }
@@ -42,12 +42,16 @@ const App = () => (
             <Route
               path="/write-nfc"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="medical_responder">
                   <WriteNFC />
                 </ProtectedRoute>
               }
             />
-            <Route path="/patient/:id" element={<PatientView />} />
+            <Route path="/patient/:id" element={
+              <ProtectedRoute>
+                <PatientView />
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

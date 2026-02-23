@@ -46,7 +46,6 @@ export const AIChatbot = () => {
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Chatbot error:', error);
       toast.error('Failed to get response. Please try again.');
     } finally {
       setIsLoading(false);
