@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, UserPlus, Copy, ExternalLink, X, Plus } from "lucide-react";
+import { ArrowLeft, UserPlus, Copy, ExternalLink, X, Plus, CreditCard, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -34,6 +34,10 @@ const AddPatient = () => {
   const [insurancePolicyNumber, setInsurancePolicyNumber] = useState("");
   const [primaryPhysician, setPrimaryPhysician] = useState("");
   const [primaryPhysicianPhone, setPrimaryPhysicianPhone] = useState("");
+
+  // NFC & Monitoring
+  const [nfcCardType, setNfcCardType] = useState("NTAG215");
+  const [monitoringPriority, setMonitoringPriority] = useState("stable");
 
   // Dynamic lists
   const [allergies, setAllergies] = useState<{ allergen: string; severity: string; reaction: string }[]>([]);
@@ -171,6 +175,14 @@ const AddPatient = () => {
         });
         if (ecError) toast.warning("Emergency contact could not be saved");
       }
+
+      // 6. Create NFC card record
+      const { error: nfcError } = await supabase.from("nfc_cards").insert({
+        patient_id: patientId,
+        encrypted_card_id: crypto.randomUUID(),
+        card_type: nfcCardType,
+      });
+      if (nfcError) toast.warning("NFC card record could not be saved");
 
       // Generate the URL
       const url = `${window.location.origin}/patient/${patientId}`;
@@ -390,6 +402,62 @@ const AddPatient = () => {
                 </Select>
                 <Button type="button" variant="outline" onClick={addCondition}><Plus className="h-4 w-4 mr-1" />Add</Button>
               </div>
+            </Card>
+
+            {/* NFC Card & Monitoring */}
+            <Card className="p-6 space-y-4">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                NFC Card & Monitoring
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="nfcCardType">NFC Card Type</Label>
+                  <Select value={nfcCardType} onValueChange={setNfcCardType}>
+                    <SelectTrigger><SelectValue placeholder="Select card type" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NTAG213">NTAG213 (144 bytes)</SelectItem>
+                      <SelectItem value="NTAG215">NTAG215 (504 bytes)</SelectItem>
+                      <SelectItem value="NTAG216">NTAG216 (888 bytes)</SelectItem>
+                      <SelectItem value="MIFARE_Classic">MIFARE Classic 1K</SelectItem>
+                      <SelectItem value="MIFARE_Ultralight">MIFARE Ultralight</SelectItem>
+                      <SelectItem value="DESFire_EV1">DESFire EV1</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="monitoringPriority" className="flex items-center gap-1">
+                    <Activity className="h-3.5 w-3.5" />
+                    Monitoring Priority
+                  </Label>
+                  <Select value={monitoringPriority} onValueChange={setMonitoringPriority}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="stable">
+                        <span className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-green-500" />
+                          Stable — Routine monitoring
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="urgent">
+                        <span className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                          Urgent — Frequent check-ins
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="critical">
+                        <span className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-red-500" />
+                          Critical — Continuous monitoring
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Select the NFC card type that matches the physical card being assigned. The monitoring priority determines alert frequency based on the patient's condition severity.
+              </p>
             </Card>
 
             {/* Emergency Contact */}
