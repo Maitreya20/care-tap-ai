@@ -99,11 +99,23 @@ const AddPatient = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Create profile via signup or find existing user — here we create the patient record
-      //    Since patients reference a user_id, we'll use the current user as the patient owner for now.
-      //    In production, you'd create a new auth user for the patient.
+      // 1) Keep profile data aligned with what gets entered in this form.
+      // The current schema links one patient record to one auth user, so we persist
+      // core identity fields on the user's profile for downstream patient views.
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName.trim(),
+          email: email.trim(),
+          phone: phone.trim() || null,
+          date_of_birth: dateOfBirth || null,
+          gender: gender || null,
+        })
+        .eq("id", user.id);
 
-      // Create patient record
+      if (profileError) throw profileError;
+
+      // 2) Create patient record
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .insert({
@@ -124,7 +136,7 @@ const AddPatient = () => {
 
       const patientId = patientData.id;
 
-      // 2. Insert allergies
+      // 3. Insert allergies
       if (allergies.length > 0) {
         const { error: allergyError } = await supabase.from("allergies").insert(
           allergies.map((a) => ({
@@ -137,7 +149,7 @@ const AddPatient = () => {
         if (allergyError) toast.warning("Some allergies could not be saved");
       }
 
-      // 3. Insert medications
+      // 4. Insert medications
       if (medications.length > 0) {
         const { error: medError } = await supabase.from("medications").insert(
           medications.map((m) => ({
@@ -150,7 +162,7 @@ const AddPatient = () => {
         if (medError) toast.warning("Some medications could not be saved");
       }
 
-      // 4. Insert medical history
+      // 5. Insert medical history
       if (conditions.length > 0) {
         const { error: condError } = await supabase.from("medical_history").insert(
           conditions.map((c) => ({
@@ -162,7 +174,7 @@ const AddPatient = () => {
         if (condError) toast.warning("Some conditions could not be saved");
       }
 
-      // 5. Insert emergency contact
+      // 6. Insert emergency contact
       if (ecName.trim() && ecPhone.trim() && ecRelationship.trim()) {
         const { error: ecError } = await supabase.from("emergency_contacts").insert({
           patient_id: patientId,
@@ -178,8 +190,9 @@ const AddPatient = () => {
       const url = `${window.location.origin}/patient/${patientId}`;
       setGeneratedValue(accessType === "nfc" ? url : patientId);
       toast.success("Patient registered successfully!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create patient");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create patient";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -202,7 +215,7 @@ const AddPatient = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Add Patient</h1>
-            <p className="text-sm text-muted-foreground">Register a new patient and generate NFC scan URL</p>
+            <p className="text-sm text-muted-foreground">Register a new patient and generate an identifier</p>
           </div>
         </div>
       </header>
