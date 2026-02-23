@@ -13,12 +13,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
+type AccessType = "uuid" | "nfc";
 
 const AddPatient = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [generatedValue, setGeneratedValue] = useState<string | null>(null);
+  const [accessType, setAccessType] = useState<AccessType>("nfc");
 
   // Patient fields
   const [fullName, setFullName] = useState("");
@@ -172,9 +174,9 @@ const AddPatient = () => {
         if (ecError) toast.warning("Emergency contact could not be saved");
       }
 
-      // Generate the URL
+      // Generate access output based on selected type
       const url = `${window.location.origin}/patient/${patientId}`;
-      setGeneratedUrl(url);
+      setGeneratedValue(accessType === "nfc" ? url : patientId);
       toast.success("Patient registered successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to create patient");
@@ -183,10 +185,10 @@ const AddPatient = () => {
     }
   };
 
-  const copyUrl = () => {
-    if (generatedUrl) {
-      navigator.clipboard.writeText(generatedUrl);
-      toast.success("URL copied to clipboard!");
+  const copyValue = () => {
+    if (generatedValue) {
+      navigator.clipboard.writeText(generatedValue);
+      toast.success(`${accessType.toUpperCase()} copied to clipboard!`);
     }
   };
 
@@ -206,26 +208,30 @@ const AddPatient = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
-        {generatedUrl ? (
+        {generatedValue ? (
           <Card className="p-8 text-center space-y-6">
             <div className="bg-stable/10 p-4 rounded-full w-16 h-16 mx-auto flex items-center justify-center">
               <UserPlus className="h-8 w-8 text-stable" />
             </div>
             <h2 className="text-2xl font-bold text-foreground">Patient Registered!</h2>
             <p className="text-muted-foreground">
-              Share this URL or program it into an NFC card. When scanned, it will display the patient's medical details.
+              {accessType === "nfc"
+                ? "Share this NFC URL or program it into an NFC card."
+                : "Share this UUID for direct patient identification."}
             </p>
             <div className="flex items-center gap-2 bg-muted p-3 rounded-lg">
-              <code className="flex-1 text-sm text-foreground break-all text-left">{generatedUrl}</code>
-              <Button size="sm" variant="outline" onClick={copyUrl}>
+              <code className="flex-1 text-sm text-foreground break-all text-left">{generatedValue}</code>
+              <Button size="sm" variant="outline" onClick={copyValue}>
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button size="sm" variant="outline" onClick={() => window.open(generatedUrl, "_blank")}>
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+              {accessType === "nfc" && (
+                <Button size="sm" variant="outline" onClick={() => window.open(generatedValue, "_blank")}>
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <div className="flex gap-3 justify-center">
-              <Button onClick={() => { setGeneratedUrl(null); navigate("/add-patient"); window.location.reload(); }}>
+              <Button onClick={() => { setGeneratedValue(null); navigate("/add-patient"); window.location.reload(); }}>
                 Add Another Patient
               </Button>
               <Button variant="outline" onClick={() => navigate("/")}>
@@ -238,6 +244,21 @@ const AddPatient = () => {
             {/* Basic Info */}
             <Card className="p-6 space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
+              <div>
+                <Label htmlFor="accessType">Identifier Type</Label>
+                <Select value={accessType} onValueChange={(value: AccessType) => setAccessType(value)}>
+                  <SelectTrigger id="accessType">
+                    <SelectValue placeholder="Choose identifier type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="uuid">UUID</SelectItem>
+                    <SelectItem value="nfc">NFC URL</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  UUID returns a plain patient ID. NFC URL returns a scannable patient link.
+                </p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="fullName">Full Name *</Label>
@@ -424,7 +445,7 @@ const AddPatient = () => {
               ) : (
                 <>
                   <UserPlus className="h-5 w-5 mr-2" />
-                  Register Patient & Generate URL
+                  Register Patient & Generate {accessType === "nfc" ? "NFC URL" : "UUID"}
                 </>
               )}
             </Button>
