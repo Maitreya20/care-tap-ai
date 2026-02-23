@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Nfc, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Nfc, CheckCircle2, AlertCircle, Loader2, Usb, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -145,34 +147,95 @@ const WriteNFC = () => {
         </Card>
 
         {/* Step 2: Write to NFC */}
-        <Card className="p-6 text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mx-auto">
-            <Nfc className="h-8 w-8 text-primary" />
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center justify-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full">
+              <Nfc className="h-8 w-8 text-primary" />
+            </div>
           </div>
-          <h2 className="text-lg font-semibold text-foreground">2. Write to NFC Card</h2>
-          <p className="text-sm text-muted-foreground">
-            {nfcSupported
-              ? "Place the NFC card on your device and click write."
-              : "Web NFC not available — the URL will be copied to clipboard instead."}
-          </p>
-          <Button
-            size="lg"
-            onClick={handleWriteNFC}
-            disabled={!selectedPatientId || isWriting}
-            className="w-full"
-          >
-            {isWriting ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Waiting for NFC card...
-              </>
-            ) : (
-              <>
-                <Nfc className="mr-2 h-5 w-5" />
-                {nfcSupported ? "Write to NFC Card" : "Copy URL to Clipboard"}
-              </>
-            )}
-          </Button>
+          <h2 className="text-lg font-semibold text-foreground text-center">2. Write to NFC Card</h2>
+
+          <Tabs defaultValue={nfcSupported ? "mobile" : "hardware"} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="mobile" className="text-xs">
+                <Nfc className="h-3.5 w-3.5 mr-1" />
+                Mobile NFC
+              </TabsTrigger>
+              <TabsTrigger value="hardware" className="text-xs">
+                <Usb className="h-3.5 w-3.5 mr-1" />
+                Hardware Reader
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="mobile" className="mt-4 space-y-3">
+              <p className="text-sm text-muted-foreground text-center">
+                {nfcSupported
+                  ? "Place the NFC card on your device and click write."
+                  : "Web NFC not available — use the Hardware Reader tab instead."}
+              </p>
+              <Button
+                size="lg"
+                onClick={handleWriteNFC}
+                disabled={!selectedPatientId || isWriting || !nfcSupported}
+                className="w-full"
+              >
+                {isWriting ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Waiting for NFC card...
+                  </>
+                ) : (
+                  <>
+                    <Nfc className="mr-2 h-5 w-5" />
+                    Write to NFC Card
+                  </>
+                )}
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="hardware" className="mt-4 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Copy the patient URL below and use your USB NFC reader software (e.g. NFC Tools with ACR122U) to write it to a tag.
+              </p>
+              {selectedPatientId ? (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input readOnly value={patientUrl} className="font-mono text-xs" />
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        navigator.clipboard.writeText(patientUrl);
+                        setGeneratedUrl(patientUrl);
+                        setWriteStatus("success");
+                        toast.success("URL copied to clipboard");
+                      }}
+                    >
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Also copy the raw UUID for the text record:
+                  </p>
+                  <div className="flex gap-2">
+                    <Input readOnly value={selectedPatientId} className="font-mono text-xs" />
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedPatientId);
+                        toast.success("Patient ID copied");
+                      }}
+                    >
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic text-center">Select a patient above first.</p>
+              )}
+            </TabsContent>
+          </Tabs>
         </Card>
 
         {/* Status */}
