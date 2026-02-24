@@ -1,0 +1,1 @@
+INSERT INTO public.user_roles (user_id, role) VALUES ('8d37acac-d56c-49c2-99a7-db1d1d1c9f2d', 'medical_responder');
