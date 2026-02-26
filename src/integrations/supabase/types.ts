@@ -456,6 +456,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_patient_by_card_number: {
+        Args: { _card_number: string }
+        Returns: string
+      }
       get_patient_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

@@ -7,10 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, UserPlus, Copy, ExternalLink, X, Plus, CreditCard, Activity } from "lucide-react";
+import { ArrowLeft, UserPlus, Copy, ExternalLink, X, Plus, CreditCard, Activity, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
@@ -35,8 +36,9 @@ const AddPatient = () => {
   const [primaryPhysician, setPrimaryPhysician] = useState("");
   const [primaryPhysicianPhone, setPrimaryPhysicianPhone] = useState("");
 
-  // NFC & Monitoring
-  const [nfcCardType, setNfcCardType] = useState("NTAG215");
+  // Card & Monitoring
+  const [cardMethod, setCardMethod] = useState<"NFC" | "UUID_CARD">("NFC");
+  const [uuidCardNumber, setUuidCardNumber] = useState("");
   const [monitoringPriority, setMonitoringPriority] = useState("stable");
 
   // Dynamic lists
@@ -90,6 +92,11 @@ const AddPatient = () => {
 
     if (!fullName.trim() || !email.trim()) {
       toast.error("Name and email are required");
+      return;
+    }
+
+    if (cardMethod === "UUID_CARD" && !uuidCardNumber.trim()) {
+      toast.error("UUID card number is required for UUID Card method");
       return;
     }
 
@@ -176,13 +183,14 @@ const AddPatient = () => {
         if (ecError) toast.warning("Emergency contact could not be saved");
       }
 
-      // 6. Create NFC card record
+      // 6. Create card record
+      const cardId = cardMethod === "UUID_CARD" ? uuidCardNumber.trim() : crypto.randomUUID();
       const { error: nfcError } = await supabase.from("nfc_cards").insert({
         patient_id: patientId,
-        encrypted_card_id: crypto.randomUUID(),
-        card_type: nfcCardType,
+        encrypted_card_id: cardId,
+        card_type: cardMethod,
       });
-      if (nfcError) toast.warning("NFC card record could not be saved");
+      if (nfcError) toast.warning("Card record could not be saved");
 
       // Generate the URL
       const url = `${window.location.origin}/patient/${patientId}`;
@@ -225,8 +233,20 @@ const AddPatient = () => {
             </div>
             <h2 className="text-2xl font-bold text-foreground">Patient Registered!</h2>
             <p className="text-muted-foreground">
-              Share this URL or program it into an NFC card. When scanned, it will display the patient's medical details.
+              Share this URL, scan the QR code, or program it into an NFC/UUID card. When scanned, it will display the patient's medical details.
             </p>
+
+            {/* QR Code */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-border inline-block">
+                <QRCodeSVG value={generatedUrl} size={200} level="H" />
+              </div>
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <QrCode className="h-4 w-4" />
+                <span>Scan this QR code to access patient profile</span>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2 bg-muted p-3 rounded-lg">
               <code className="flex-1 text-sm text-foreground break-all text-left">{generatedUrl}</code>
               <Button size="sm" variant="outline" onClick={copyUrl}>
@@ -404,29 +424,25 @@ const AddPatient = () => {
               </div>
             </Card>
 
-            {/* NFC Card & Monitoring */}
+            {/* Card Type & Monitoring */}
             <Card className="p-6 space-y-4">
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                NFC Card & Monitoring
+                Card Type & Monitoring
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="nfcCardType">NFC Card Type</Label>
-                  <Select value={nfcCardType} onValueChange={setNfcCardType}>
-                    <SelectTrigger><SelectValue placeholder="Select card type" /></SelectTrigger>
+                  <Label>Card Method</Label>
+                  <Select value={cardMethod} onValueChange={(v) => setCardMethod(v as "NFC" | "UUID_CARD")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="NTAG213">NTAG213 (144 bytes)</SelectItem>
-                      <SelectItem value="NTAG215">NTAG215 (504 bytes)</SelectItem>
-                      <SelectItem value="NTAG216">NTAG216 (888 bytes)</SelectItem>
-                      <SelectItem value="MIFARE_Classic">MIFARE Classic 1K</SelectItem>
-                      <SelectItem value="MIFARE_Ultralight">MIFARE Ultralight</SelectItem>
-                      <SelectItem value="DESFire_EV1">DESFire EV1</SelectItem>
+                      <SelectItem value="NFC">NFC Card</SelectItem>
+                      <SelectItem value="UUID_CARD">UUID Card</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="monitoringPriority" className="flex items-center gap-1">
+                  <Label className="flex items-center gap-1">
                     <Activity className="h-3.5 w-3.5" />
                     Monitoring Priority
                   </Label>
@@ -455,8 +471,26 @@ const AddPatient = () => {
                   </Select>
                 </div>
               </div>
+              {cardMethod === "UUID_CARD" && (
+                <div>
+                  <Label htmlFor="uuidCardNumber">UUID Card Number *</Label>
+                  <Input
+                    id="uuidCardNumber"
+                    value={uuidCardNumber}
+                    onChange={(e) => setUuidCardNumber(e.target.value)}
+                    placeholder="Enter UUID card number (printed on the card)"
+                    required
+                    maxLength={100}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter the unique identifier printed on the patient's physical card. This will be used to look up their record when scanned.
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                Select the NFC card type that matches the physical card being assigned. The monitoring priority determines alert frequency based on the patient's condition severity.
+                {cardMethod === "NFC" 
+                  ? "An NFC card will be programmed with the patient URL. Use the Write NFC page after registration."
+                  : "A UUID card stores a printed identifier that links to this patient's record when scanned by a reader."}
               </p>
             </Card>
 
