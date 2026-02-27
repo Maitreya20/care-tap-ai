@@ -7,11 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, UserPlus, Copy, ExternalLink, X, Plus, CreditCard, Activity, QrCode } from "lucide-react";
+import { ArrowLeft, UserPlus, Copy, ExternalLink, X, Plus, CreditCard, Activity, QrCode, Printer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
+import jsPDF from "jspdf";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
@@ -210,6 +211,92 @@ const AddPatient = () => {
     }
   };
 
+  const generateCardPDF = () => {
+    if (!generatedUrl) return;
+
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [85.6, 54] });
+
+    // Card background
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, 85.6, 54, "F");
+
+    // Header bar
+    doc.setFillColor(59, 130, 246); // blue-500
+    doc.rect(0, 0, 85.6, 12, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("MediScan AI — Patient Card", 4, 8);
+
+    // Patient name
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text(fullName || "Patient", 4, 20);
+
+    // Card ID label
+    const cardId = cardMethod === "UUID_CARD" ? uuidCardNumber : "NFC Auto-Generated";
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184); // slate-400
+    doc.text("CARD ID", 4, 27);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text(cardId, 4, 31);
+
+    // Blood type badge
+    if (bloodType) {
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text("BLOOD TYPE", 4, 38);
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(bloodType, 4, 43);
+    }
+
+    // QR code — render to canvas, then embed as image
+    const qrCanvas = document.querySelector("#pdf-qr-code canvas") as HTMLCanvasElement | null;
+    // Use the hidden QR canvas rendered below
+    const qrContainer = document.getElementById("pdf-qr-code");
+    if (qrContainer) {
+      const svgEl = qrContainer.querySelector("svg");
+      if (svgEl) {
+        const svgData = new XMLSerializer().serializeToString(svgEl);
+        const canvas = document.createElement("canvas");
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext("2d");
+        const img = new Image();
+        img.onload = () => {
+          ctx?.drawImage(img, 0, 0, 200, 200);
+          const qrDataUrl = canvas.toDataURL("image/png");
+          // White background for QR
+          doc.setFillColor(255, 255, 255);
+          doc.roundedRect(60, 16, 22, 22, 2, 2, "F");
+          doc.addImage(qrDataUrl, "PNG", 61, 17, 20, 20);
+
+          doc.setFontSize(5);
+          doc.setTextColor(148, 163, 184);
+          doc.text("Scan for records", 63, 41);
+
+          // Footer
+          doc.setFontSize(5);
+          doc.setTextColor(100, 116, 139);
+          doc.text("Emergency medical data — Authorized personnel only", 4, 51);
+
+          doc.save(`patient-card-${fullName.replace(/\s+/g, "-").toLowerCase() || "card"}.pdf`);
+          toast.success("Card PDF downloaded!");
+        };
+        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+        return;
+      }
+    }
+
+    // Fallback without QR
+    doc.save(`patient-card-${fullName.replace(/\s+/g, "-").toLowerCase() || "card"}.pdf`);
+    toast.success("Card PDF downloaded!");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card shadow-sm">
@@ -247,6 +334,19 @@ const AddPatient = () => {
               </div>
             </div>
 
+            {/* Hidden QR for PDF generation */}
+            <div id="pdf-qr-code" className="hidden">
+              <QRCodeSVG value={generatedUrl} size={200} level="H" />
+            </div>
+
+            {/* Card ID info */}
+            {cardMethod === "UUID_CARD" && uuidCardNumber && (
+              <div className="bg-muted p-3 rounded-lg text-sm">
+                <span className="text-muted-foreground">UUID Card Number: </span>
+                <span className="font-mono font-semibold text-foreground">{uuidCardNumber}</span>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 bg-muted p-3 rounded-lg">
               <code className="flex-1 text-sm text-foreground break-all text-left">{generatedUrl}</code>
               <Button size="sm" variant="outline" onClick={copyUrl}>
@@ -256,7 +356,11 @@ const AddPatient = () => {
                 <ExternalLink className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Button variant="outline" onClick={generateCardPDF}>
+                <Printer className="h-4 w-4 mr-2" />
+                Download Card PDF
+              </Button>
               <Button onClick={() => { setGeneratedUrl(null); navigate("/add-patient"); window.location.reload(); }}>
                 Add Another Patient
               </Button>
