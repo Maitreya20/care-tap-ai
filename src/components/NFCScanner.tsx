@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Smartphone, AlertCircle, CheckCircle2, Usb, Keyboard, CreditCard } from "lucide-react";
+import { Smartphone, AlertCircle, CheckCircle2, Usb, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,13 +35,13 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
   const [isScanning, setIsScanning] = useState(false);
   const [nfcSupported] = useState(() => "NDEFReader" in window);
   const [manualInput, setManualInput] = useState("");
-  const [uuidCardInput, setUuidCardInput] = useState("");
+  const [hardwareInput, setHardwareInput] = useState("");
   const [isLookingUp, setIsLookingUp] = useState(false);
 
   const handleNFCScan = async () => {
     if (!nfcSupported) {
       toast.error("NFC not supported on this device", {
-        description: "Web NFC requires Chrome on Android. Use the Hardware Reader or Manual tab instead."
+        description: "Web NFC requires Chrome on Android. Use Hardware Reader or Manual tab instead."
       });
       return;
     }
@@ -52,9 +52,7 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
       const ndef = new NDEFReader();
       await ndef.scan();
 
-      toast.info("Ready to scan", {
-        description: "Hold NFC card near your device"
-      });
+      toast.info("Ready to scan", { description: "Hold NFC card near your device" });
 
       // @ts-ignore - Web NFC API
       ndef.addEventListener("reading", ({ message }) => {
@@ -90,9 +88,7 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
       });
     } catch {
       setIsScanning(false);
-      toast.error("NFC scan failed", {
-        description: "Please check permissions and try again"
-      });
+      toast.error("NFC scan failed", { description: "Please check permissions and try again" });
     }
   };
 
@@ -108,36 +104,43 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
     toast.success("Patient loaded successfully");
   };
 
-  const handleUuidCardLookup = async () => {
-    const cardNumber = uuidCardInput.trim();
-    if (!cardNumber) {
-      toast.error("Enter a UUID card number");
+  /** Unified hardware lookup: tries UUID/URL extraction first, then falls back to card number DB lookup */
+  const handleHardwareLookup = async () => {
+    const input = hardwareInput.trim();
+    if (!input) {
+      toast.error("Enter or paste the scanned data");
       return;
     }
 
+    // 1. Try direct patient ID / URL extraction
+    const directId = extractPatientId(input);
+    if (directId) {
+      onPatientScanned(directId);
+      toast.success("Patient loaded from scanned data");
+      return;
+    }
+
+    // 2. Fall back to card-number lookup in nfc_cards table
     setIsLookingUp(true);
     try {
-      // Look up patient by card number using the nfc_cards table
       const { data, error } = await supabase
         .from("nfc_cards")
         .select("patient_id")
-        .eq("encrypted_card_id", cardNumber)
+        .eq("encrypted_card_id", input)
         .eq("is_active", true)
         .single();
 
       if (error || !data) {
         toast.error("Card not found", {
-          description: "No active patient record found for this UUID card number"
+          description: "No active patient record found for this card identifier"
         });
         return;
       }
 
       onPatientScanned(data.patient_id);
-      toast.success("Patient found via UUID card");
+      toast.success("Patient found via card lookup");
     } catch {
-      toast.error("Lookup failed", {
-        description: "Could not search for card number"
-      });
+      toast.error("Lookup failed", { description: "Could not search for card identifier" });
     } finally {
       setIsLookingUp(false);
     }
@@ -150,14 +153,8 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
         toast.error("Clipboard is empty");
         return;
       }
-      setManualInput(text);
-      const extractedId = extractPatientId(text);
-      if (extractedId) {
-        onPatientScanned(extractedId);
-        toast.success("Patient loaded from clipboard");
-      } else {
-        toast.error("Clipboard data is not a valid patient ID or URL");
-      }
+      setHardwareInput(text);
+      toast.info("Pasted from clipboard — press Look Up to search");
     } catch {
       toast.error("Could not read clipboard", {
         description: "Please paste manually into the input field"
@@ -172,26 +169,20 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
           <Smartphone className="h-10 w-10 text-primary" />
         </div>
 
-        <h2 className="text-2xl font-bold text-foreground mb-2">
-          Scan Patient Card
-        </h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Scan Patient Card</h2>
         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-          Tap an NFC card, scan a UUID card, or enter details manually to access a patient's emergency medical profile.
+          Tap an NFC card, scan a UUID card with a hardware reader, or enter details manually.
         </p>
 
-        <Tabs defaultValue={nfcSupported ? "mobile" : "uuid-card"} className="w-full max-w-md mx-auto text-left">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue={nfcSupported ? "mobile" : "hardware"} className="w-full max-w-md mx-auto text-left">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="mobile" className="text-xs">
               <Smartphone className="h-3.5 w-3.5 mr-1" />
               Mobile NFC
             </TabsTrigger>
-            <TabsTrigger value="uuid-card" className="text-xs">
-              <CreditCard className="h-3.5 w-3.5 mr-1" />
-              UUID Card
-            </TabsTrigger>
             <TabsTrigger value="hardware" className="text-xs">
               <Usb className="h-3.5 w-3.5 mr-1" />
-              Hardware
+              Hardware / UUID
             </TabsTrigger>
             <TabsTrigger value="manual" className="text-xs">
               <Keyboard className="h-3.5 w-3.5 mr-1" />
@@ -204,7 +195,7 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
             <p className="text-sm text-muted-foreground">
               {nfcSupported
                 ? "Tap the patient's NFC card on your phone."
-                : "Web NFC is not available on this device. Use UUID Card or Manual entry instead."}
+                : "Web NFC is not available on this device. Use Hardware / UUID or Manual entry instead."}
             </p>
             <Button
               size="lg"
@@ -226,22 +217,23 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
             </Button>
           </TabsContent>
 
-          {/* UUID Card */}
-          <TabsContent value="uuid-card" className="mt-4 space-y-3">
+          {/* Hardware Reader / UUID Card — unified */}
+          <TabsContent value="hardware" className="mt-4 space-y-3">
             <p className="text-sm text-muted-foreground">
-              Enter the UUID card number printed on the patient's card to look up their record.
+              Scan a card using your USB NFC reader or enter a UUID card number. The system will automatically find the patient record.
             </p>
-            <Input
-              placeholder="Enter UUID card number..."
-              value={uuidCardInput}
-              onChange={(e) => setUuidCardInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleUuidCardLookup()}
-            />
-            <Button
-              onClick={handleUuidCardLookup}
-              disabled={!uuidCardInput.trim() || isLookingUp}
-              className="w-full"
-            >
+            <div className="flex gap-2">
+              <Input
+                placeholder="Paste scanned data or UUID card number..."
+                value={hardwareInput}
+                onChange={(e) => setHardwareInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleHardwareLookup()}
+              />
+              <Button variant="secondary" onClick={handlePasteFromClipboard} title="Paste from clipboard">
+                Paste
+              </Button>
+            </div>
+            <Button onClick={handleHardwareLookup} disabled={!hardwareInput.trim() || isLookingUp} className="w-full">
               {isLookingUp ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
@@ -249,32 +241,10 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
                 </>
               ) : (
                 <>
-                  <CreditCard className="mr-2 h-4 w-4" />
+                  <Usb className="mr-2 h-4 w-4" />
                   Look Up Patient
                 </>
               )}
-            </Button>
-          </TabsContent>
-
-          {/* Hardware Reader (ACR122U, etc.) */}
-          <TabsContent value="hardware" className="mt-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Use your USB NFC reader to scan the card, then paste the result here.
-            </p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Paste scanned UUID or URL..."
-                value={manualInput}
-                onChange={(e) => setManualInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-              />
-              <Button variant="secondary" onClick={handlePasteFromClipboard} title="Paste from clipboard">
-                Paste
-              </Button>
-            </div>
-            <Button onClick={handleManualSubmit} disabled={!manualInput.trim()} className="w-full">
-              <Usb className="mr-2 h-4 w-4" />
-              Load Patient
             </Button>
           </TabsContent>
 
@@ -298,7 +268,7 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
       </Card>
 
       {/* Status Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4 flex items-start gap-3 bg-card border border-border">
           {nfcSupported ? (
             <>
@@ -313,25 +283,17 @@ export const NFCScanner = ({ onPatientScanned }: NFCScannerProps) => {
               <AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
               <div>
                 <h4 className="font-semibold text-sm text-foreground">Mobile NFC Unavailable</h4>
-                <p className="text-xs text-muted-foreground">Use UUID card or hardware reader</p>
+                <p className="text-xs text-muted-foreground">Use hardware reader or manual entry</p>
               </div>
             </>
           )}
         </Card>
 
         <Card className="p-4 flex items-start gap-3 bg-card border border-border">
-          <CreditCard className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-          <div>
-            <h4 className="font-semibold text-sm text-foreground">UUID Card Support</h4>
-            <p className="text-xs text-muted-foreground">Look up patients by card number</p>
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-start gap-3 bg-card border border-border">
           <Usb className="h-5 w-5 text-primary mt-0.5 shrink-0" />
           <div>
-            <h4 className="font-semibold text-sm text-foreground">Hardware Readers</h4>
-            <p className="text-xs text-muted-foreground">ACR122U & compatible USB readers</p>
+            <h4 className="font-semibold text-sm text-foreground">Hardware & UUID Cards</h4>
+            <p className="text-xs text-muted-foreground">ACR122U readers & UUID card numbers</p>
           </div>
         </Card>
       </div>
