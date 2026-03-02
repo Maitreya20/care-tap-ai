@@ -109,7 +109,7 @@ serve(async (req) => {
     }
 
     // Validate patient data structure
-    if (!patientData.name || !patientData.age || !patientData.bloodType) {
+    if (!patientData.name || patientData.age === undefined || patientData.age === null || !patientData.bloodType) {
       return new Response(
         JSON.stringify({ error: "Invalid patient data structure" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
