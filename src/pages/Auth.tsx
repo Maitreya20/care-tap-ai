@@ -24,7 +24,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate("/");
+      navigate("/", { replace: true });
     }
   }, [user, navigate]);
 
@@ -65,12 +65,16 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
             toast.error("Invalid email or password");
+          } else if (error.message.includes("Network error")) {
+            toast.error("Network error. Please check your connection.");
+          } else if (error.message.includes("Email not confirmed")) {
+            toast.error("Please confirm your email address before signing in.");
           } else {
             toast.error(error.message);
           }
         } else {
           toast.success("Signed in successfully");
-          navigate("/");
+          navigate("/", { replace: true });
         }
       } else {
         const { error } = await signUp(email, password, fullName);
