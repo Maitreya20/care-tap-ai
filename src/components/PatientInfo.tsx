@@ -5,7 +5,7 @@ import { User, Droplet, AlertTriangle, Pill, Stethoscope, Phone } from "lucide-r
 interface PatientData {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
   bloodType: string;
   allergies: string[];
   medications: string[];
