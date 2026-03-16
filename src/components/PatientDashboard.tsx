@@ -103,9 +103,10 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
         .eq("id", dbPatient.user_id)
         .single();
 
-      const age = profileData?.date_of_birth
+      const calculatedAge = profileData?.date_of_birth
         ? Math.floor((Date.now() - new Date(profileData.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-        : 0;
+        : null;
+      const age = calculatedAge && calculatedAge > 0 ? calculatedAge : null;
 
       const mappedPatient: PatientData = {
         id: dbPatient.id,
