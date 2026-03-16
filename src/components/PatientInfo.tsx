@@ -5,7 +5,7 @@ import { User, Droplet, AlertTriangle, Pill, Stethoscope, Phone } from "lucide-r
 interface PatientData {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
   bloodType: string;
   allergies: string[];
   medications: string[];
@@ -30,7 +30,7 @@ export const PatientInfo = ({ patient }: PatientInfoProps) => {
         </div>
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-foreground">{patient.name}</h2>
-          <p className="text-muted-foreground">Age: {patient.age} years • ID: {patient.id}</p>
+          <p className="text-muted-foreground">{patient.age ? `Age: ${patient.age} years • ` : ''}ID: {patient.id}</p>
         </div>
       </div>
 

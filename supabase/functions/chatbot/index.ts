@@ -1,15 +1,12 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// In-memory rate limiter (per user, max 10 requests per minute)
+// In-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60000;
@@ -60,15 +57,16 @@ serve(async (req) => {
 
     // Rate limit
     if (!checkRateLimit(user.id)) {
-      return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait a minute before sending more messages.' }), {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait a minute.' }), {
         status: 429,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    if (!openAIApiKey) {
-      console.error('OPENAI_API_KEY is not configured');
-      return new Response(JSON.stringify({ error: 'AI service is not configured. Please contact an administrator.' }), {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY is not configured');
+      return new Response(JSON.stringify({ error: 'AI service is not configured.' }), {
         status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -93,9 +91,8 @@ serve(async (req) => {
       });
     }
 
-    // Validate messages
     if (messages.length > MAX_MESSAGES) {
-      return new Response(JSON.stringify({ error: `Maximum ${MAX_MESSAGES} messages allowed. Please clear the chat and start a new conversation.` }), {
+      return new Response(JSON.stringify({ error: `Maximum ${MAX_MESSAGES} messages allowed. Please clear the chat.` }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -120,36 +117,41 @@ serve(async (req) => {
     // Fetch patient context if available
     let patientContext = '';
     try {
-      const { data: patientData } = await supabase.rpc('get_patient_id', { _user_id: user.id });
-      if (patientData) {
+      const { data: patientId } = await supabase.rpc('get_patient_id', { _user_id: user.id });
+      if (patientId) {
         const [{ data: profile }, { data: medications }, { data: allergies }] = await Promise.all([
           supabase.from('profiles').select('full_name, date_of_birth, gender').eq('id', user.id).single(),
-          supabase.from('medications').select('medication_name, dosage, frequency').eq('patient_id', patientData).eq('is_active', true),
-          supabase.from('allergies').select('allergen, severity').eq('patient_id', patientData),
+          supabase.from('medications').select('medication_name, dosage, frequency').eq('patient_id', patientId).eq('is_active', true),
+          supabase.from('allergies').select('allergen, severity').eq('patient_id', patientId),
         ]);
 
         if (profile) {
+          const age = profile.date_of_birth
+            ? Math.floor((Date.now() - new Date(profile.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : null;
+
           patientContext = `\n\nPatient context (use to personalize responses):
 - Name: ${profile.full_name}
-${profile.date_of_birth ? `- Date of birth: ${profile.date_of_birth}` : ''}
+${age !== null && age > 0 ? `- Age: ${age} years` : '- Age: Unknown'}
 ${profile.gender ? `- Gender: ${profile.gender}` : ''}
 ${medications && medications.length > 0 ? `- Current medications: ${medications.map(m => `${m.medication_name} ${m.dosage} ${m.frequency}`).join(', ')}` : ''}
 ${allergies && allergies.length > 0 ? `- Known allergies: ${allergies.map(a => `${a.allergen} (${a.severity})`).join(', ')}` : ''}`;
         }
       }
     } catch (e) {
-      // Patient context is optional, continue without it
       console.log('Could not fetch patient context:', e);
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log(`Chatbot request from user ${user.id}, ${messages.length} messages`);
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-3-flash-preview',
         messages: [
           { 
             role: 'system', 
@@ -172,26 +174,39 @@ Key guidelines:
 
     if (!response.ok) {
       const errorStatus = response.status;
-      console.error('OpenAI API error:', errorStatus);
+      const errorText = await response.text();
+      console.error('AI Gateway error:', errorStatus, errorText);
       
       if (errorStatus === 429) {
         return new Response(JSON.stringify({ error: 'AI service is temporarily busy. Please try again in a moment.' }), {
-          status: 503,
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (errorStatus === 402) {
+        return new Response(JSON.stringify({ error: 'AI service payment required. Please contact administrator.' }), {
+          status: 402,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       
-      throw new Error(`OpenAI API error: ${errorStatus}`);
+      throw new Error(`AI Gateway error: ${errorStatus}`);
     }
 
     const data = await response.json();
-    const assistantMessage = data.choices[0].message.content;
+    const assistantMessage = data.choices?.[0]?.message?.content;
+
+    if (!assistantMessage) {
+      console.error('No content in AI response:', JSON.stringify(data));
+      throw new Error('Empty AI response');
+    }
 
     return new Response(JSON.stringify({ message: assistantMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in chatbot function:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Chatbot error:', error instanceof Error ? error.message : 'Unknown error');
     return new Response(JSON.stringify({ error: 'An error occurred. Please try again.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

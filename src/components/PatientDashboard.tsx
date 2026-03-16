@@ -15,7 +15,7 @@ interface PatientDashboardProps {
 interface PatientData {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
   bloodType: string;
   allergies: string[];
   medications: string[];
@@ -42,7 +42,7 @@ const MOCK_PATIENTS: Record<string, PatientData> = {
   "DEMO-12345": {
     id: "DEMO-12345",
     name: "John Anderson",
-    age: 45,
+    age: 52,
     bloodType: "A+",
     allergies: ["Penicillin", "Peanuts"],
     medications: ["Metformin 500mg", "Lisinopril 10mg", "Aspirin 81mg"],
@@ -103,9 +103,10 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
         .eq("id", dbPatient.user_id)
         .single();
 
-      const age = profileData?.date_of_birth
+      const calculatedAge = profileData?.date_of_birth
         ? Math.floor((Date.now() - new Date(profileData.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-        : 0;
+        : null;
+      const age = calculatedAge && calculatedAge > 0 ? calculatedAge : null;
 
       const mappedPatient: PatientData = {
         id: dbPatient.id,
@@ -191,7 +192,7 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
 
         <Button
           variant="outline"
-          onClick={() => speakAlert(`Critical patient alert: ${patient.name}, age ${patient.age}. Blood type ${patient.bloodType}. Known conditions: ${patient.conditions.join(", ")}`)}
+          onClick={() => speakAlert(`Critical patient alert: ${patient.name}${patient.age ? `, age ${patient.age}` : ''}. Blood type ${patient.bloodType}. Known conditions: ${patient.conditions.join(", ")}`)}
           className="border-border"
         >
           <Volume2 className="mr-2 h-4 w-4" />

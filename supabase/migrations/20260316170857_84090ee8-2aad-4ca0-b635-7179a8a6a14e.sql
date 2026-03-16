@@ -1,0 +1,1 @@
+UPDATE profiles SET date_of_birth = '1974-03-16' WHERE email = 'maitreyatrade@gmail.com';
