@@ -42,7 +42,7 @@ const MOCK_PATIENTS: Record<string, PatientData> = {
   "DEMO-12345": {
     id: "DEMO-12345",
     name: "John Anderson",
-    age: 45,
+    age: 52,
     bloodType: "A+",
     allergies: ["Penicillin", "Peanuts"],
     medications: ["Metformin 500mg", "Lisinopril 10mg", "Aspirin 81mg"],
