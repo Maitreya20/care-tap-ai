@@ -15,7 +15,7 @@ interface PatientDashboardProps {
 interface PatientData {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
   bloodType: string;
   allergies: string[];
   medications: string[];
