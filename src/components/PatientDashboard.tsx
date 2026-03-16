@@ -192,7 +192,7 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
 
         <Button
           variant="outline"
-          onClick={() => speakAlert(`Critical patient alert: ${patient.name}, age ${patient.age}. Blood type ${patient.bloodType}. Known conditions: ${patient.conditions.join(", ")}`)}
+          onClick={() => speakAlert(`Critical patient alert: ${patient.name}${patient.age ? `, age ${patient.age}` : ''}. Blood type ${patient.bloodType}. Known conditions: ${patient.conditions.join(", ")}`)}
           className="border-border"
         >
           <Volume2 className="mr-2 h-4 w-4" />
