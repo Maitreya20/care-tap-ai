@@ -123,7 +123,7 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
 
       const mappedPatient: PatientData = {
         id: dbPatient.id,
-        name: profileData?.full_name || "Unknown Patient",
+        name: patientName || "Unknown Patient",
         age,
         bloodType: dbPatient.blood_type || "Unknown",
         allergies: dbPatient.allergies.map((a) => a.allergen),
