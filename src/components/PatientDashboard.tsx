@@ -31,6 +31,8 @@ interface DbPatient {
   id: string;
   blood_type: string | null;
   user_id: string;
+  full_name: string | null;
+  date_of_birth: string | null;
   allergies: { allergen: string }[];
   medications: { medication_name: string; dosage: string; frequency: string }[];
   conditions: { condition: string; status: string }[];

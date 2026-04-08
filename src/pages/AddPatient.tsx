@@ -113,11 +113,16 @@ const AddPatient = () => {
       //    Since patients reference a user_id, we'll use the current user as the patient owner for now.
       //    In production, you'd create a new auth user for the patient.
 
-      // Create patient record
+      // Create patient record with identity fields
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .insert({
           user_id: user.id,
+          full_name: fullName.trim(),
+          email: email.trim(),
+          date_of_birth: dateOfBirth || null,
+          gender: gender as any || null,
+          phone: phone || null,
           blood_type: bloodType as any || null,
           height_cm: heightCm ? parseFloat(heightCm) : null,
           weight_kg: weightKg ? parseFloat(weightKg) : null,
