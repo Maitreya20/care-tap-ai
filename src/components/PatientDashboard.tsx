@@ -80,6 +80,8 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
           id,
           blood_type,
           user_id,
+          full_name,
+          date_of_birth,
           allergies(allergen),
           medications(medication_name, dosage, frequency),
           conditions:medical_history(condition, status),
@@ -99,14 +101,23 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
       }
 
       const dbPatient = data as unknown as DbPatient;
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name, date_of_birth")
-        .eq("id", dbPatient.user_id)
-        .single();
 
-      const calculatedAge = profileData?.date_of_birth
-        ? Math.floor((Date.now() - new Date(profileData.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      // Use patient's own fields first, fall back to profile lookup
+      let patientName = dbPatient.full_name || null;
+      let patientDob = dbPatient.date_of_birth || null;
+
+      if (!patientName) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("full_name, date_of_birth")
+          .eq("id", dbPatient.user_id)
+          .single();
+        patientName = profileData?.full_name || "Unknown Patient";
+        patientDob = patientDob || profileData?.date_of_birth || null;
+      }
+
+      const calculatedAge = patientDob
+        ? Math.floor((Date.now() - new Date(patientDob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
         : null;
       const age = calculatedAge && calculatedAge > 0 ? calculatedAge : null;
 
