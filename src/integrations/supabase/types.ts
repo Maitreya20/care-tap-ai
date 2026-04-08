@@ -344,13 +344,18 @@ export type Database = {
         Row: {
           blood_type: Database["public"]["Enums"]["blood_type"] | null
           created_at: string
+          date_of_birth: string | null
+          email: string | null
           encrypted_ssn: string | null
+          full_name: string | null
+          gender: Database["public"]["Enums"]["gender"] | null
           height_cm: number | null
           id: string
           insurance_policy_number: string | null
           insurance_provider: string | null
           is_active: boolean
           medical_notes: string | null
+          phone: string | null
           primary_physician: string | null
           primary_physician_phone: string | null
           updated_at: string
@@ -360,13 +365,18 @@ export type Database = {
         Insert: {
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
           created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
           encrypted_ssn?: string | null
+          full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
           height_cm?: number | null
           id?: string
           insurance_policy_number?: string | null
           insurance_provider?: string | null
           is_active?: boolean
           medical_notes?: string | null
+          phone?: string | null
           primary_physician?: string | null
           primary_physician_phone?: string | null
           updated_at?: string
@@ -376,13 +386,18 @@ export type Database = {
         Update: {
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
           created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
           encrypted_ssn?: string | null
+          full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
           height_cm?: number | null
           id?: string
           insurance_policy_number?: string | null
           insurance_provider?: string | null
           is_active?: boolean
           medical_notes?: string | null
+          phone?: string | null
           primary_physician?: string | null
           primary_physician_phone?: string | null
           updated_at?: string
