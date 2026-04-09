@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -18,6 +20,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("patient");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, signIn, signUp, loading: authLoading } = useAuth();
@@ -77,7 +80,7 @@ const Auth = () => {
           navigate("/", { replace: true });
         }
       } else {
-        const { error } = await signUp(email, password, fullName);
+        const { error, data } = await signUp(email, password, fullName);
         if (error) {
           if (error.message.includes("already registered")) {
             toast.error("This email is already registered. Please sign in.");
@@ -85,6 +88,17 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
+          // Assign the selected role if we got a user back
+          if (data?.user && selectedRole !== "patient") {
+            // The trigger auto-assigns 'patient', so we need to update if different
+            const { error: roleError } = await supabase
+              .from("user_roles")
+              .update({ role: selectedRole as "patient" | "medical_responder" | "hospital_admin" })
+              .eq("user_id", data.user.id);
+            if (roleError) {
+              console.error("Role assignment error:", roleError);
+            }
+          }
           toast.success("Account created! Please check your email to confirm your account.");
         }
       }
@@ -138,6 +152,22 @@ const Auth = () => {
                     disabled={loading}
                     required
                   />
+                </div>
+              )}
+
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={selectedRole} onValueChange={setSelectedRole} disabled={loading}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="patient">Patient</SelectItem>
+                      <SelectItem value="medical_responder">Medical Responder</SelectItem>
+                      <SelectItem value="hospital_admin">Hospital Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               
