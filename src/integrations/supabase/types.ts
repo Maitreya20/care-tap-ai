@@ -471,6 +471,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_role_on_signup: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: undefined
+      }
       get_patient_by_card_number: {
         Args: { _card_number: string }
         Returns: string
