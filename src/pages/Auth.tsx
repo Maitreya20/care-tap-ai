@@ -20,6 +20,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("patient");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, signIn, signUp, loading: authLoading } = useAuth();
