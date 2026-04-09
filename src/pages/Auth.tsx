@@ -154,6 +154,22 @@ const Auth = () => {
                   />
                 </div>
               )}
+
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={selectedRole} onValueChange={setSelectedRole} disabled={loading}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="patient">Patient</SelectItem>
+                      <SelectItem value="medical_responder">Medical Responder</SelectItem>
+                      <SelectItem value="hospital_admin">Hospital Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
