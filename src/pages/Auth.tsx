@@ -80,7 +80,7 @@ const Auth = () => {
           navigate("/", { replace: true });
         }
       } else {
-        const { error } = await signUp(email, password, fullName);
+        const { error, data } = await signUp(email, password, fullName);
         if (error) {
           if (error.message.includes("already registered")) {
             toast.error("This email is already registered. Please sign in.");
@@ -88,6 +88,17 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
+          // Assign the selected role if we got a user back
+          if (data?.user && selectedRole !== "patient") {
+            // The trigger auto-assigns 'patient', so we need to update if different
+            const { error: roleError } = await supabase
+              .from("user_roles")
+              .update({ role: selectedRole as "patient" | "medical_responder" | "hospital_admin" })
+              .eq("user_id", data.user.id);
+            if (roleError) {
+              console.error("Role assignment error:", roleError);
+            }
+          }
           toast.success("Account created! Please check your email to confirm your account.");
         }
       }
