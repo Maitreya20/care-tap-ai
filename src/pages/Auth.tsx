@@ -90,7 +90,7 @@ const Auth = () => {
         } else {
           // If a non-default role was selected, update it via secure RPC
           if (data?.user && selectedRole !== "patient") {
-            await supabase.rpc("assign_role_on_signup", { _role: selectedRole });
+            await supabase.rpc("assign_role_on_signup", { _role: selectedRole as "patient" | "medical_responder" | "hospital_admin" });
           }
           toast.success("Account created! Please check your email to confirm your account.");
         }
