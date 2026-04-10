@@ -34,7 +34,7 @@ const App = () => (
             <Route
               path="/add-patient"
               element={
-                <ProtectedRoute requiredRole="medical_responder">
+                <ProtectedRoute requiredRoles={["medical_responder", "hospital_admin"]}>
                   <AddPatient />
                 </ProtectedRoute>
               }
@@ -42,7 +42,7 @@ const App = () => (
             <Route
               path="/write-nfc"
               element={
-                <ProtectedRoute requiredRole="medical_responder">
+                <ProtectedRoute requiredRoles={["medical_responder", "hospital_admin"]}>
                   <WriteNFC />
                 </ProtectedRoute>
               }
