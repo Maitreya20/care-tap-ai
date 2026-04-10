@@ -29,7 +29,7 @@ export const ProtectedRoute = ({ children, requiredRole, requiredRoles }: Protec
       });
   }, [user, requiredRole, requiredRoles]);
 
-  if (loading || (user && requiredRole && !roleChecked)) {
+  if (loading || (user && rolesToCheck && !roleChecked)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -41,7 +41,7 @@ export const ProtectedRoute = ({ children, requiredRole, requiredRoles }: Protec
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredRole && !hasRole) {
+  if (rolesToCheck && !hasRole) {
     return <Navigate to="/" replace />;
   }
 
