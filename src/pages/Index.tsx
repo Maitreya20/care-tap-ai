@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { NFCScanner } from "@/components/NFCScanner";
 import { PatientDashboard } from "@/components/PatientDashboard";
-import { Shield, Activity, LogOut, UserPlus, Smartphone } from "lucide-react";
+import { Shield, Activity, LogOut, UserPlus, Smartphone, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { AIChatbot } from "@/components/AIChatbot";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [scannedPatientId, setScannedPatientId] = useState<string | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => setUserRole(data?.role ?? null));
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -36,13 +48,21 @@ const Index = () => {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {user?.email}
             </span>
-            <Button variant="outline" size="sm" onClick={() => navigate("/add-patient")}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Patient
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/write-nfc")}>
-              <Smartphone className="h-4 w-4 mr-2" />
-              Write NFC
+            {userRole && userRole !== "patient" && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => navigate("/add-patient")}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Patient
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate("/write-nfc")}>
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Write NFC
+                </Button>
+              </>
+            )}
+            <Button variant="outline" size="sm" onClick={() => navigate("/profile")}>
+              <User className="h-4 w-4 mr-2" />
+              Profile
             </Button>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />

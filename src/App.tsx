@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import AddPatient from "./pages/AddPatient";
 import PatientView from "./pages/PatientView";
 import WriteNFC from "./pages/WriteNFC";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,7 +35,7 @@ const App = () => (
             <Route
               path="/add-patient"
               element={
-                <ProtectedRoute requiredRoles={["medical_responder", "hospital_admin"]}>
+                <ProtectedRoute requiredRoles={["doctor", "admin"]}>
                   <AddPatient />
                 </ProtectedRoute>
               }
@@ -42,7 +43,7 @@ const App = () => (
             <Route
               path="/write-nfc"
               element={
-                <ProtectedRoute requiredRoles={["medical_responder", "hospital_admin"]}>
+                <ProtectedRoute requiredRoles={["doctor", "admin"]}>
                   <WriteNFC />
                 </ProtectedRoute>
               }
@@ -50,6 +51,11 @@ const App = () => (
             <Route path="/patient/:id" element={
               <ProtectedRoute>
                 <PatientView />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
