@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: "patient" | "medical_responder" | "hospital_admin";
-  requiredRoles?: ("patient" | "medical_responder" | "hospital_admin")[];
+  requiredRole?: "patient" | "doctor" | "admin" | "staff";
+  requiredRoles?: ("patient" | "doctor" | "admin" | "staff")[];
 }
 
 export const ProtectedRoute = ({ children, requiredRole, requiredRoles }: ProtectedRouteProps) => {

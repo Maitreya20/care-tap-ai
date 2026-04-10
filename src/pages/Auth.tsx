@@ -90,7 +90,7 @@ const Auth = () => {
         } else {
           // If a non-default role was selected, update it via secure RPC
           if (data?.user && selectedRole !== "patient") {
-            await supabase.rpc("assign_role_on_signup", { _role: selectedRole as "patient" | "medical_responder" | "hospital_admin" });
+            await supabase.rpc("assign_role_on_signup", { _role: selectedRole as "patient" | "doctor" | "admin" | "staff" });
           }
           toast.success("Account created! Please check your email to confirm your account.");
         }
@@ -157,8 +157,9 @@ const Auth = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="patient">Patient</SelectItem>
-                      <SelectItem value="medical_responder">Medical Responder</SelectItem>
-                      <SelectItem value="hospital_admin">Hospital Admin</SelectItem>
+                      <SelectItem value="doctor">Doctor</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
