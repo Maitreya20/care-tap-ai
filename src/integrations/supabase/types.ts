@@ -489,7 +489,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "patient" | "medical_responder" | "hospital_admin"
+      app_role:
+        | "patient"
+        | "medical_responder"
+        | "hospital_admin"
+        | "admin"
+        | "doctor"
+        | "staff"
       blood_type: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
       gender: "male" | "female" | "other" | "prefer_not_to_say"
       triage_level: "critical" | "urgent" | "stable"
@@ -620,7 +626,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["patient", "medical_responder", "hospital_admin"],
+      app_role: [
+        "patient",
+        "medical_responder",
+        "hospital_admin",
+        "admin",
+        "doctor",
+        "staff",
+      ],
       blood_type: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
       gender: ["male", "female", "other", "prefer_not_to_say"],
       triage_level: ["critical", "urgent", "stable"],
