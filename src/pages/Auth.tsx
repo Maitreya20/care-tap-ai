@@ -20,7 +20,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("patient");
+  
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, signIn, signUp, loading: authLoading } = useAuth();
@@ -88,10 +88,6 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          // If a non-default role was selected, update it via secure RPC
-          if (data?.user && selectedRole !== "patient") {
-            await supabase.rpc("assign_role_on_signup", { _role: selectedRole as "patient" | "doctor" | "admin" | "staff" });
-          }
           toast.success("Account created! Please check your email to confirm your account.");
         }
       }
@@ -148,22 +144,6 @@ const Auth = () => {
                 </div>
               )}
 
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={selectedRole} onValueChange={setSelectedRole} disabled={loading}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="patient">Patient</SelectItem>
-                      <SelectItem value="doctor">Doctor</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
               
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
