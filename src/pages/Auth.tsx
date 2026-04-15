@@ -29,24 +29,19 @@ const Auth = () => {
   }, [user, navigate]);
 
   const validateForm = () => {
-    const emailResult = emailSchema.safeParse(email);
-    if (!emailResult.success) {
-      toast.error(emailResult.error.errors[0].message);
+    if (!validateEmail(email)) {
+      toast.error("Please enter a valid email address");
       return false;
     }
 
-    const passwordResult = passwordSchema.safeParse(password);
-    if (!passwordResult.success) {
-      toast.error(passwordResult.error.errors[0].message);
+    if (!validatePassword(password)) {
+      toast.error("Password must be at least 6 characters");
       return false;
     }
 
-    if (!isLogin) {
-      const nameResult = nameSchema.safeParse(fullName);
-      if (!nameResult.success) {
-        toast.error(nameResult.error.errors[0].message);
-        return false;
-      }
+    if (!isLogin && !validateName(fullName)) {
+      toast.error("Name must be at least 2 characters");
+      return false;
     }
 
     return true;
