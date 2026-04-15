@@ -8,9 +8,9 @@ import { Activity, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-const emailSchema = z.string().email("Please enter a valid email address");
-const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
-const nameSchema = z.string().min(2, "Name must be at least 2 characters");
+const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validatePassword = (password: string) => password.length >= 6;
+const validateName = (name: string) => name.length >= 2;
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
