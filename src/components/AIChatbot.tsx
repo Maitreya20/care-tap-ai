@@ -15,9 +15,9 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { label: 'Symptoms', icon: Stethoscope, prompt: 'What could be causing my headache and fatigue?' },
-  { label: 'Medications', icon: Pill, prompt: 'What are common side effects I should watch for with my medications?' },
-  { label: 'Emergency', icon: AlertTriangle, prompt: 'What are the warning signs that I need emergency medical care?' },
+  { label: 'I feel unwell', icon: Stethoscope, prompt: "I'm not feeling great today — can you help me figure out what might be going on?" },
+  { label: 'My medications', icon: Pill, prompt: "Can you tell me about my current medications and anything I should watch out for?" },
+  { label: 'When to get help', icon: AlertTriangle, prompt: "What are the signs that I should go to the ER or call an ambulance?" },
 ];
 
 export const AIChatbot = () => {
@@ -134,8 +134,8 @@ export const AIChatbot = () => {
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground py-6">
               <Bot className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-medium">Hi! I'm your medical assistant.</p>
-              <p className="text-xs mt-1 mb-4">Ask me any health-related questions.</p>
+              <p className="text-sm font-medium">Hi! I'm your health buddy 👋</p>
+              <p className="text-xs mt-1 mb-4">Just tell me how you're feeling — no medical jargon needed.</p>
               
               <div className="flex flex-col gap-2 mt-4">
                 {QUICK_ACTIONS.map((action) => (
