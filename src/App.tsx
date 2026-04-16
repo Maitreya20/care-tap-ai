@@ -11,6 +11,7 @@ import AddPatient from "./pages/AddPatient";
 import PatientView from "./pages/PatientView";
 import WriteNFC from "./pages/WriteNFC";
 import Profile from "./pages/Profile";
+import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,11 @@ const App = () => (
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRoles={["admin"]}>
+                <AdminPanel />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
