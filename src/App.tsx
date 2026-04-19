@@ -12,6 +12,7 @@ import PatientView from "./pages/PatientView";
 import WriteNFC from "./pages/WriteNFC";
 import Profile from "./pages/Profile";
 import AdminPanel from "./pages/AdminPanel";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
