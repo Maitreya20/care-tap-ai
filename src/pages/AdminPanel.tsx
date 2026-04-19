@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Shield, Loader2, UserCog } from "lucide-react";
+import { ArrowLeft, Shield, Loader2, UserCog, Save } from "lucide-react";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -34,8 +34,9 @@ const ASSIGNABLE_ROLES: AppRole[] = ["patient", "doctor", "staff", "admin", "med
 const AdminPanel = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [pending, setPending] = useState<Record<string, AppRole>>({});
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -44,7 +45,6 @@ const AdminPanel = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch profiles and roles separately, then join client-side
       const [{ data: profiles, error: pErr }, { data: roles, error: rErr }] = await Promise.all([
         supabase.from("profiles").select("id, email, full_name"),
         supabase.from("user_roles").select("id, user_id, role"),
@@ -65,7 +65,6 @@ const AdminPanel = () => {
         };
       });
 
-      // Sort: admins first, then doctors, then alphabetical
       merged.sort((a, b) => {
         const order: Record<string, number> = { admin: 0, doctor: 1, staff: 2 };
         const aO = order[a.role] ?? 9;
@@ -74,6 +73,7 @@ const AdminPanel = () => {
       });
 
       setUsers(merged);
+      setPending({});
     } catch (err) {
       console.error(err);
       toast.error("Failed to load users");
@@ -82,25 +82,58 @@ const AdminPanel = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: AppRole) => {
-    setUpdating(userId);
+  const handleSelect = (userId: string, newRole: AppRole, currentRole: AppRole) => {
+    setPending((prev) => {
+      const next = { ...prev };
+      if (newRole === currentRole) {
+        delete next[userId];
+      } else {
+        next[userId] = newRole;
+      }
+      return next;
+    });
+  };
+
+  const handleSave = async (user: UserWithRole) => {
+    const newRole = pending[user.userId];
+    if (!newRole) return;
+    setSavingId(user.userId);
     try {
-      const { error } = await supabase
-        .from("user_roles")
-        .update({ role: newRole })
-        .eq("user_id", userId);
+      let error;
+      if (user.roleId) {
+        ({ error } = await supabase
+          .from("user_roles")
+          .update({ role: newRole })
+          .eq("id", user.roleId));
+      } else {
+        // No row exists yet — insert one
+        const insertRes = await supabase
+          .from("user_roles")
+          .insert({ user_id: user.userId, role: newRole })
+          .select("id")
+          .single();
+        error = insertRes.error;
+        if (insertRes.data) {
+          user.roleId = insertRes.data.id;
+        }
+      }
 
       if (error) throw error;
 
       setUsers((prev) =>
-        prev.map((u) => (u.userId === userId ? { ...u, role: newRole } : u))
+        prev.map((u) => (u.userId === user.userId ? { ...u, role: newRole, roleId: user.roleId } : u))
       );
-      toast.success("Role updated successfully");
+      setPending((prev) => {
+        const next = { ...prev };
+        delete next[user.userId];
+        return next;
+      });
+      toast.success(`Role updated to ${newRole.replace("_", " ")}`);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to update role");
     } finally {
-      setUpdating(null);
+      setSavingId(null);
     }
   };
 
