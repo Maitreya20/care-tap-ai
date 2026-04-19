@@ -195,9 +195,9 @@ const AdminPanel = () => {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Select
-                              value={u.role}
-                              onValueChange={(val) => handleRoleChange(u.userId, val as AppRole)}
-                              disabled={updating === u.userId}
+                              value={pending[u.userId] ?? u.role}
+                              onValueChange={(val) => handleSelect(u.userId, val as AppRole, u.role)}
+                              disabled={savingId === u.userId}
                             >
                               <SelectTrigger className="w-[180px]">
                                 <SelectValue />
@@ -210,9 +210,20 @@ const AdminPanel = () => {
                                 ))}
                               </SelectContent>
                             </Select>
-                            {updating === u.userId && (
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => handleSave(u)}
+                              disabled={!pending[u.userId] || savingId === u.userId}
+                            >
+                              {savingId === u.userId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Save className="h-4 w-4 mr-1" />
+                                  Save
+                                </>
+                              )}
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
