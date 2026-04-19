@@ -129,7 +129,7 @@ const Auth = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">MediScan</h1>
-            <p className="text-sm text-muted-foreground">Emergency Health Response</p>
+            <p className="text-sm text-muted-foreground">Health Care System</p>
           </div>
         </div>
 
