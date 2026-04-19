@@ -193,11 +193,11 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header Actions */}
-      <div className="flex items-center justify-between">
-        <Button 
-          variant="outline" 
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
+        <Button
+          variant="outline"
           onClick={onBack}
-          className="border-border"
+          className="border-border w-full sm:w-auto"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Scan Another Card
@@ -206,7 +206,7 @@ export const PatientDashboard = ({ patientId, onBack }: PatientDashboardProps) =
         <Button
           variant="outline"
           onClick={() => speakAlert(`Critical patient alert: ${patient.name}${patient.age ? `, age ${patient.age}` : ''}. Blood type ${patient.bloodType}. Known conditions: ${patient.conditions.join(", ")}`)}
-          className="border-border"
+          className="border-border w-full sm:w-auto"
         >
           <Volume2 className="mr-2 h-4 w-4" />
           Voice Alert

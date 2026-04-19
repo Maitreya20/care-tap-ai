@@ -34,45 +34,45 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary p-2 rounded-lg">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="bg-primary p-2 rounded-lg shrink-0">
               <Activity className="h-6 w-6 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">MediScan</h1>
-              <p className="text-sm text-muted-foreground">Emergency Health Response System</p>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">MediScan</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Emergency Health Response System</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:inline">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-muted-foreground hidden lg:inline truncate max-w-[180px]">
               {user?.email}
             </span>
             {userRole && userRole !== "patient" && (
               <>
                 <Button variant="outline" size="sm" onClick={() => navigate("/add-patient")}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add Patient
+                  <UserPlus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Patient</span>
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => navigate("/write-nfc")}>
-                  <Smartphone className="h-4 w-4 mr-2" />
-                  Write NFC
+                  <Smartphone className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Write NFC</span>
                 </Button>
               </>
             )}
             {userRole === "admin" && (
               <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
-                <Settings className="h-4 w-4 mr-2" />
-                Admin
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Admin</span>
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => navigate("/profile")}>
-              <User className="h-4 w-4 mr-2" />
-              Profile
+              <User className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Profile</span>
             </Button>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
