@@ -128,7 +128,7 @@ const Auth = () => {
             <Activity className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">MediScan AI</h1>
+            <h1 className="text-2xl font-bold text-foreground">MediScan</h1>
             <p className="text-sm text-muted-foreground">Emergency Health Response</p>
           </div>
         </div>
@@ -141,7 +141,7 @@ const Auth = () => {
                 ? "Enter your email and we'll send you a reset link"
                 : isLogin
                 ? "Enter your credentials to access the system"
-                : "Register to start using MediScan AI"}
+                : "Register to start using MediScan"}
             </CardDescription>
           </CardHeader>
           <CardContent>
