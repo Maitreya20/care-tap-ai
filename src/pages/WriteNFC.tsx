@@ -64,47 +64,83 @@ const WriteNFC = () => {
 
     if (!nfcSupported) {
       toast.error("Web NFC not supported", {
-        description: "Web NFC requires Chrome on Android. The URL has been copied to clipboard instead.",
+        description: "Web NFC requires Chrome on Android (HTTPS). URL copied to clipboard instead.",
       });
-      navigator.clipboard.writeText(patientUrl);
+      try { await navigator.clipboard.writeText(patientUrl); } catch {}
       setGeneratedUrl(patientUrl);
       setWriteStatus("success");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      toast.error("Insecure context", {
+        description: "Web NFC requires HTTPS. Open the site over HTTPS and try again.",
+      });
       return;
     }
 
     try {
       setIsWriting(true);
       setWriteStatus("ready");
-      toast.info("Hold NFC card near your device to write...");
 
       // @ts-ignore - Web NFC API
       const ndef = new NDEFReader();
 
-      await ndef.write({
-        records: [
-          {
-            recordType: "url",
-            data: patientUrl,
-          },
-          {
-            recordType: "text",
-            data: selectedPatientId,
-          },
-        ],
+      // Explicitly request permission first (some Android builds need this)
+      try {
+        // @ts-ignore - permissions name 'nfc' is non-standard but supported in Chrome Android
+        const perm = await navigator.permissions?.query?.({ name: "nfc" as PermissionName });
+        if (perm && perm.state === "denied") {
+          throw new Error("NFC permission denied. Enable it in site settings.");
+        }
+      } catch (permErr) {
+        // Non-fatal — proceed; write() will prompt if needed
+        console.warn("NFC permission query failed (continuing):", permErr);
+      }
+
+      toast.info("Hold an NFC tag against the back of your phone...", {
+        description: "Keep it steady until you see a success message.",
       });
+
+      // Write only the URL record — keeps payload small enough for NTAG213 (~137 bytes)
+      // and avoids multi-record failures on small tags. Scanner already extracts the
+      // patient UUID from the URL path.
+      await ndef.write(
+        {
+          records: [{ recordType: "url", data: patientUrl }],
+        },
+        { overwrite: true }
+      );
 
       setWriteStatus("success");
       setGeneratedUrl(patientUrl);
       setIsWriting(false);
       toast.success("NFC card written successfully!", {
-        description: "The patient URL has been written to the NFC card.",
+        description: "Scan it to open the patient's emergency profile.",
       });
     } catch (error: any) {
       setIsWriting(false);
       setWriteStatus("error");
-      toast.error("Failed to write NFC card", {
-        description: error?.message || "Check permissions and try again.",
-      });
+      console.error("NFC write error:", error);
+
+      const name = error?.name || "";
+      let description = error?.message || "Check permissions and try again.";
+
+      if (name === "NotAllowedError") {
+        description = "Permission denied. Enable NFC permission for this site in Chrome settings.";
+      } else if (name === "NotSupportedError") {
+        description = "This device or browser does not support NFC writing. Use Chrome on Android.";
+      } else if (name === "NotReadableError") {
+        description = "Could not access NFC. Make sure NFC is turned ON in your phone's system settings.";
+      } else if (name === "NetworkError") {
+        description = "Tag was lost or write failed. Hold the tag steady against the phone and retry.";
+      } else if (name === "AbortError") {
+        description = "NFC write was cancelled.";
+      } else if (/securit/i.test(error?.message || "")) {
+        description = "Web NFC requires HTTPS and must be triggered by a tap. Try again.";
+      }
+
+      toast.error("Failed to write NFC card", { description });
     }
   };
 
